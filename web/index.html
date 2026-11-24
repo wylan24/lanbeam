@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f5f6f8" media="(prefers-color-scheme: light)">
+<meta name="apple-mobile-web-app-title" content="LanBeam">
+<title>LanBeam</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233b6cf6'/%3E%3Cpath d='M9 18l7-7 7 7M16 11v12' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #ffffff; --text: #14161b; --muted: #667085; --line: #e4e7ec;
+    --accent: #3b6cf6; --accent-ink: #ffffff; --accent-soft: #e8eefe; --danger: #d92d20; --ok: #12b76a;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b0d12; --card: #151821; --text: #eef0f4; --muted: #98a2b3; --line: #262a35;
+      --accent: #5b84ff; --accent-ink: #ffffff; --accent-soft: #1b2440; --danger: #f97066; --ok: #32d583;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: max(16px, env(safe-area-inset-top)) 16px 48px; }
+  header { display: flex; align-items: center; gap: 12px; margin: 8px 0 20px; }
+  .logo { width: 36px; height: 36px; border-radius: 10px; background: var(--accent); display: grid; place-items: center; flex: none; }
+  header h1 { font-size: 20px; margin: 0; line-height: 1.1; }
+  header .sub { color: var(--muted); font-size: 13px; display: flex; align-items: center; gap: 6px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .dot.on { background: var(--ok); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px; margin-bottom: 16px; }
+  .card h2 { font-size: 15px; margin: 0 0 12px; color: var(--muted); font-weight: 600; letter-spacing: .01em; }
+  button, .btn {
+    font: inherit; border: 0; border-radius: 12px; padding: 10px 14px; cursor: pointer;
+    background: var(--accent-soft); color: var(--accent); font-weight: 600; text-decoration: none;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap;
+  }
+  button:disabled { opacity: .5; cursor: default; }
+  .primary { background: var(--accent); color: var(--accent-ink); width: 100%; padding: 16px; font-size: 17px; border-radius: 14px; }
+  .ghost { background: transparent; color: var(--muted); padding: 8px 10px; }
+  .danger { color: var(--danger); }
+
+  /* Connect card (shown on the computer only) */
+  .connect { display: grid; grid-template-columns: 200px 1fr; gap: 20px; align-items: center; }
+  .qr { width: 200px; height: 200px; border-radius: 12px; background: #fff; display: block; }
+  .connect ol { margin: 0 0 12px; padding-left: 20px; }
+  .connect li { margin-bottom: 4px; }
+  .addr { font: 13px/1.4 ui-monospace, Consolas, monospace; color: var(--muted); word-break: break-all; margin: 8px 0; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  select { font: inherit; padding: 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--text); max-width: 100%; }
+  @media (max-width: 560px) { .connect { grid-template-columns: 1fr; justify-items: center; text-align: left; } }
+
+  /* Send */
+  .drop { border: 2px dashed var(--line); border-radius: 14px; padding: 22px; text-align: center; color: var(--muted); margin-top: 12px; }
+  body.dragging .drop { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+  .queue { margin-top: 12px; display: grid; gap: 10px; }
+  .job { font-size: 14px; }
+  .job .meta { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); }
+  .job .meta span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+  .bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin-top: 4px; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .15s; }
+  .job.done .bar i { background: var(--ok); }
+  .job.fail .bar i { background: var(--danger); width: 100% !important; }
+
+  /* Files */
+  .files { list-style: none; margin: 0; padding: 0; }
+  .file { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+  .file:first-child { border-top: 0; }
+  .icon { width: 44px; height: 44px; border-radius: 10px; background: var(--accent-soft); flex: none; display: grid; place-items: center; overflow: hidden; font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; }
+  .icon img { width: 100%; height: 100%; object-fit: cover; }
+  .info { flex: 1; min-width: 0; }
+  .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+  .name a { color: inherit; text-decoration: none; }
+  .small { font-size: 13px; color: var(--muted); }
+  .actions { display: flex; gap: 6px; flex: none; }
+  .actions button, .actions .btn { padding: 8px 10px; font-size: 14px; }
+  .empty { color: var(--muted); text-align: center; padding: 24px 0; }
+  .toast { position: fixed; left: 50%; bottom: max(20px, env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: calc(100% - 32px); }
+  .toast.show { opacity: 1; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l7-7 7 7M12 6v13"/></svg></div>
+    <div>
+      <h1>LanBeam</h1>
+      <div class="sub"><span class="dot" id="dot"></span><span id="status">Connecting…</span></div>
+    </div>
+  </header>
+
+  <section class="card" id="connectCard" hidden>
+    <h2>Connect your iPhone</h2>
+    <div class="connect">
+      <img class="qr" id="qr" alt="QR code to open LanBeam on your phone">
+      <div>
+        <ol>
+          <li>Put your iPhone on the same Wi-Fi as this computer.</li>
+          <li>Open the Camera and point it at the code.</li>
+          <li>Tap the link. That's it. No app to install.</li>
+        </ol>
+        <div class="addr" id="addr"></div>
+        <div class="row">
+          <button id="copyBtn" type="button">Copy link</button>
+          <button id="folderBtn" type="button">Open folder</button>
+          <select id="addrSelect" hidden aria-label="Network address"></select>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2 id="sendTitle">Send to computer</h2>
+    <button class="primary" id="pickBtn" type="button">Choose photos or files</button>
+    <input type="file" id="picker" multiple hidden>
+    <div class="drop" id="drop" hidden>…or drop files anywhere on this page</div>
+    <div class="queue" id="queue"></div>
+  </section>
+
+  <section class="card">
+    <div class="row" style="justify-content: space-between; margin-bottom: 4px;">
+      <h2 style="margin: 0;">Shared files</h2>
+      <span class="small" id="count"></span>
+    </div>
+    <ul class="files" id="files"></ul>
+    <div class="empty" id="empty" hidden>Nothing here yet. Files you send from either device show up here.</div>
+  </section>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const T = new URLSearchParams(location.search).get("t") || "";
+const $ = id => document.getElementById(id);
+const api = p => T ? p + (p.includes("?") ? "&" : "?") + "t=" + encodeURIComponent(T) : p;
+
+let info = { local: false, urls: [] };
+let canShareFiles = false;
+try { canShareFiles = !!(navigator.canShare && navigator.canShare({ files: [new File([""], "x.jpg", { type: "image/jpeg" })] })); } catch {}
+
+const IMG = /\.(jpe?g|png|gif|webp|heic|heif|avif|bmp)$/i;
+const VID = /\.(mov|mp4|m4v|webm|avi|mkv|3gp)$/i;
+
+function fmtSize(n) {
+  const u = ["B", "KB", "MB", "GB", "TB"]; let i = 0;
+  while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+  return (i && n < 10 ? n.toFixed(1) : Math.round(n)) + " " + u[i];
+}
+function fmtAgo(ms) {
+  const s = Math.max(0, (Date.now() - ms) / 1000);
+  if (s < 60) return "just now";
+  if (s < 3600) return Math.floor(s / 60) + " min ago";
+  if (s < 86400) return Math.floor(s / 3600) + " h ago";
+  return new Date(ms).toLocaleDateString();
+}
+let toastTimer;
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
+}
+function el(tag, props = {}, ...kids) {
+  const e = Object.assign(document.createElement(tag), props);
+  for (const k of kids) if (k != null) e.append(k);
+  return e;
+}
+
+/* ---------- connection info ---------- */
+async function loadInfo() {
+  const r = await fetch(api("/api/info"));
+  if (r.status === 401) { location.reload(); return; }
+  info = await r.json();
+  document.title = "LanBeam · " + info.host;
+  if (info.local) {
+    $("connectCard").hidden = false;
+    $("drop").hidden = false;
+    $("sendTitle").textContent = "Send to iPhone";
+    $("pickBtn").textContent = "Choose files";
+    if (info.urls.length) {
+      showAddr(0);
+      if (info.urls.length > 1) {
+        const sel = $("addrSelect"); sel.hidden = false;
+        info.urls.forEach((u, i) => sel.append(el("option", { value: i, textContent: (i ? "Try " : "") + new URL(u).host })));
+        sel.onchange = () => showAddr(+sel.value);
+      }
+    } else {
+      $("addr").textContent = "No network found. Connect this computer to Wi-Fi and restart LanBeam.";
+      $("qr").hidden = true; $("copyBtn").hidden = true;
+    }
+  }
+}
+function showAddr(i) {
+  $("qr").src = api("/api/qr?i=" + i);
+  $("addr").textContent = info.urls[i];
+  $("copyBtn").onclick = () => navigator.clipboard.writeText(info.urls[i]).then(() => toast("Link copied"));
+}
+$("folderBtn").onclick = () => fetch(api("/api/open-folder"), { method: "POST" });
+
+/* ---------- file list ---------- */
+async function loadFiles() {
+  let files;
+  try {
+    const r = await fetch(api("/api/files"));
+    if (!r.ok) throw new Error(r.status);
+    files = await r.json();
+    setOnline(true);
+  } catch { setOnline(false); return; }
+  const ul = $("files"); ul.replaceChildren();
+  $("empty").hidden = files.length > 0;
+  $("count").textContent = files.length ? files.length + (files.length === 1 ? " file" : " files") : "";
+  for (const f of files) ul.append(fileRow(f));
+}
+
+function fileRow(f) {
+  const enc = encodeURIComponent(f.name);
+  const dl = api("/dl/" + enc), view = api("/dl/" + enc + "?inline");
+  const ext = (f.name.match(/\.([^.]{1,4})$/) || [, "file"])[1];
+  const icon = el("div", { className: "icon" });
+  if (IMG.test(f.name) && !/\.hei[cf]$/i.test(f.name) && f.size < 30e6) {
+    icon.append(el("img", { src: view, loading: "lazy", alt: "", onerror() { this.remove(); icon.textContent = ext; } }));
+  } else icon.textContent = ext;
+
+  const actions = el("div", { className: "actions" });
+  const media = IMG.test(f.name) || VID.test(f.name);
+  if (!info.local && canShareFiles && f.size < 1.5e9) {
+    actions.append(el("button", { type: "button", textContent: media ? "Save" : "Share", title: media ? "Save to Photos or Files" : "Share or save", onclick() { shareFile(f, this); } }));
+  }
+  actions.append(el("a", { className: "btn", href: dl, download: f.name, textContent: "Download" }));
+  actions.append(el("button", { type: "button", className: "ghost danger", textContent: "✕", title: "Delete", ariaLabel: "Delete " + f.name, onclick() { removeFile(f); } }));
+
+  return el("li", { className: "file" }, icon,
+    el("div", { className: "info" },
+      el("div", { className: "name" }, el("a", { href: view, target: "_blank", rel: "noopener", textContent: f.name, title: f.name })),
+      el("div", { className: "small", textContent: fmtSize(f.size) + " · " + fmtAgo(f.mod) })),
+    actions);
+}
+
+// iOS only lets the share sheet open straight from a tap, so the file is
+// fetched first; if that took too long the user taps once more.
+async function shareFile(f, btn) {
+  try {
+    if (!btn._file) {
+      const label = btn.textContent;
+      btn.disabled = true; btn.textContent = "Loading…";
+      const blob = await (await fetch(api("/dl/" + encodeURIComponent(f.name)))).blob();
+      btn._file = new File([blob], f.name, { type: blob.type });
+      btn.disabled = false; btn.textContent = label;
+    }
+    await navigator.share({ files: [btn._file] });
+  } catch (e) {
+    btn.disabled = false;
+    if (e.name === "NotAllowedError") { btn.textContent = "Tap to save"; }
+    else if (e.name !== "AbortError") toast("Couldn't share: " + e.message);
+  }
+}
+
+async function removeFile(f) {
+  if (!confirm(`Delete "${f.name}" from the shared folder?`)) return;
+  const r = await fetch(api("/api/files/" + encodeURIComponent(f.name)), { method: "DELETE" });
+  if (!r.ok) toast("Couldn't delete: " + (await r.text()));
+  loadFiles();
+}
+
+function setOnline(on) {
+  $("dot").classList.toggle("on", on);
+  $("status").textContent = on ? (info.host ? "Connected to " + info.host : "Connected") : "Can't reach the computer. Is LanBeam still running?";
+}
+
+/* ---------- sending ---------- */
+const pending = [];
+let active = 0, wakeLock = null;
+
+$("pickBtn").onclick = () => $("picker").click();
+$("picker").onchange = e => { enqueue([...e.target.files]); e.target.value = ""; };
+
+let dragDepth = 0;
+addEventListener("dragenter", e => { if (info.local && e.dataTransfer.types.includes("Files")) { dragDepth++; document.body.classList.add("dragging"); } });
+addEventListener("dragleave", () => { if (--dragDepth <= 0) { dragDepth = 0; document.body.classList.remove("dragging"); } });
+addEventListener("dragover", e => e.preventDefault());
+addEventListener("drop", e => {
+  e.preventDefault(); dragDepth = 0; document.body.classList.remove("dragging");
+  if (info.local) enqueue([...e.dataTransfer.files]);
+});
+
+function enqueue(files) {
+  for (const file of files) {
+    const pct = el("span"), bar = el("i");
+    const row = el("div", { className: "job" },
+      el("div", { className: "meta" }, el("span", { textContent: file.name }), pct),
+      el("div", { className: "bar" }, bar));
+    $("queue").prepend(row);
+    pending.push({ file, row, pct, bar });
+  }
+  pump();
+}
+
+async function pump() {
+  if (pending.length && !wakeLock && "wakeLock" in navigator) {
+    try { wakeLock = await navigator.wakeLock.request("screen"); wakeLock.onrelease = () => { wakeLock = null; }; } catch {}
+  }
+  while (active < 2 && pending.length) {
+    const job = pending.shift(); active++;
+    send(job).finally(() => { active--; pump(); });
+  }
+  if (!active && !pending.length && wakeLock) { wakeLock.release(); wakeLock = null; }
+}
+
+function send({ file, row, pct, bar }) {
+  return new Promise(resolve => {
+    const xhr = new XMLHttpRequest();
+    const start = performance.now();
+    xhr.open("POST", api("/api/upload?name=" + encodeURIComponent(file.name)));
+    xhr.upload.onprogress = e => {
+      if (!e.lengthComputable) return;
+      const secs = (performance.now() - start) / 1000;
+      bar.style.width = (100 * e.loaded / e.total) + "%";
+      pct.textContent = Math.floor(100 * e.loaded / e.total) + "%" + (secs > 0.5 ? " · " + fmtSize(e.loaded / secs) + "/s" : "");
+    };
+    xhr.onload = () => {
+      if (xhr.status === 200) {
+        row.classList.add("done"); bar.style.width = "100%";
+        const secs = (performance.now() - start) / 1000;
+        pct.textContent = fmtSize(file.size) + (secs > 0.5 ? " · " + fmtSize(file.size / secs) + "/s" : "") + " ✓";
+        setTimeout(() => row.remove(), 8000);
+      } else fail(xhr.responseText || "error " + xhr.status);
+      resolve();
+    };
+    xhr.onerror = () => { fail("connection lost"); resolve(); };
+    function fail(msg) { row.classList.add("fail"); pct.textContent = "Failed: " + msg.trim(); }
+    xhr.send(file);
+  });
+}
+
+/* ---------- live updates ---------- */
+function listen() {
+  const es = new EventSource(api("/api/events"));
+  es.onmessage = loadFiles;
+  es.onopen = () => { setOnline(true); loadFiles(); };
+  es.onerror = () => setOnline(false);
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden) loadFiles(); });
+setInterval(() => { if (!document.hidden) loadFiles(); }, 15000);
+
+loadInfo().then(loadFiles).then(listen);
+</script>
+</body>
+</html>

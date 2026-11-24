@@ -1,0 +1,4 @@
+dist/
+/lanbeam
+*.exe
+.DS_Store
